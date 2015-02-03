@@ -1,23 +1,29 @@
 {
   "bot_id": "mission_838",
-  "title": "My simple bot",
-  "description": "This is a simple bot",
+  "title": "FINAM bot",
+  "description": "This is a bot for the FINMA registred banks",
   "language": "python",
   "data_type": "primary data",
   "identifying_fields": [
-    "number"
+    "Name"
   ],
   "company_fields": {
     "name": "company"
   },
   "files": [
-    "scraper.py"
+    "scraper.py",
+    "licence_transformer.py"
   ],
+  "transformers": [{
+    "file":  "licence_transformer.py",
+    "data_type": "simple-licence",
+    "identifying_fields": ["company_name"]
+  }],
   "frequency": "monthly",
   "publisher": {
-    "name": "Publisher of the data",
-    "url": "Publisher's website",
-    "terms": "Copyright terms (e.g. Open Government License, n/a, etc)",
-    "terms_url": "A place where these terms can be checked or verified"
+    "name": "FINMA",
+    "url": "http://www.finma.ch",
+    "terms": "Copyright © Swiss Financial Market Supervisory Authority FINMA 2009",
+    "terms_url": "http://www.finma.ch/e/pages/disclaimer.aspx"
   }
 }

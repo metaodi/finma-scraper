@@ -5,19 +5,22 @@ import datetime
 import turbotlib
 import requests
 import xlrd
-import pprint
 
 turbotlib.log("Starting run...") # Optional debug logging
 
-def get_rows(content):
-    workbook = xlrd.open_workbook(file_contents=content)
+FINMA_URL = 'https://www.finma.ch/institute/xls_d/dbeh.xlsx'
+
+def get_rows(file_path=None, content=None):
+    if content is not None:
+        workbook = xlrd.open_workbook(file_contents=content)
+    else:
+        workbook = xlrd.open_workbook(file_path)
+
     worksheet = workbook.sheet_by_index(0)
     # Extract the row headers
     header_row = worksheet.row_values(3)
-    print header_row
     rows = []
     for row_num in range(worksheet.nrows):
-        # Data columns begin at row count 7 (8 in Excel)
         if row_num >= 3:
             rows.append(dict(zip(
                 header_row,
@@ -25,15 +28,12 @@ def get_rows(content):
             )))
     return rows
 
-FINMA_URL = 'https://www.finma.ch/institute/xls_d/dbeh.xlsx'
 r = requests.get(FINMA_URL)
-pprint.pprint(get_rows(r.content))
+data = get_rows(content=r.content)
 
-# for n in range(0,20):
-#     data = {"number": n,
-#             "company": "Company %s Ltd" % n,
-#             "message": "Hello %s" % n,
-#             "sample_date": datetime.datetime.now().isoformat(),
-#             "source_url": "http://somewhere.com/%s" % n}
-#     # The Turbot specification simply requires us to output lines of JSON
-#     print json.dumps(data)
+for d in data:
+    if d['Name'] and len(d['Name']) and not d['Name'].startswith('Total bewilligte Banken und Effekte'):
+        d.pop(None)
+        d['sample_date'] = datetime.datetime.now().isoformat()
+        d['source_url'] = FINMA_URL
+        print json.dumps(d)
