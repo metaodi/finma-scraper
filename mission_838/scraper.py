@@ -9,6 +9,7 @@ import xlrd
 turbotlib.log("Starting run...") # Optional debug logging
 
 FINMA_URL = 'https://www.finma.ch/institute/xls_d/dbeh.xlsx'
+HEADER_ROW_NUM = 3
 
 def get_rows(file_path=None, content=None):
     if content is not None:
@@ -18,14 +19,13 @@ def get_rows(file_path=None, content=None):
 
     worksheet = workbook.sheet_by_index(0)
     # Extract the row headers
-    header_row = worksheet.row_values(3)
+    header_row = worksheet.row_values(HEADER_ROW_NUM)
     rows = []
-    for row_num in range(worksheet.nrows):
-        if row_num >= 3:
-            rows.append(dict(zip(
-                header_row,
-                worksheet.row_values(row_num)
-            )))
+    for row_num in range(HEADER_ROW_NUM + 1, worksheet.nrows):
+        rows.append(dict(zip(
+            header_row,
+            worksheet.row_values(row_num)
+        )))
     return rows
 
 r = requests.get(FINMA_URL)
