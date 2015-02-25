@@ -1,23 +1,29 @@
 {
   "bot_id": "mission_784",
-  "title": "My simple bot",
-  "description": "This is a simple bot",
+  "title": "OCIF bot",
+  "description": "This is a bot for OCIF registered financial institutions",
   "language": "python",
   "data_type": "primary data",
   "identifying_fields": [
-    "number"
+    "NUM. LIC."
   ],
   "company_fields": {
-    "name": "company"
+    "name": "NOMBRE INSTITUCI\xd3N"
   },
   "files": [
-    "scraper.py"
+    "scraper.py",
+    "license_transformer.py"
   ],
+  "transformers": [{
+    "file":  "licence_transformer.py",
+    "data_type": "simple-licence",
+    "identifying_fields": ["company_name"]
+  }],
   "frequency": "monthly",
   "publisher": {
-    "name": "Publisher of the data",
-    "url": "Publisher's website",
-    "terms": "Copyright terms (e.g. Open Government License, n/a, etc)",
-    "terms_url": "A place where these terms can be checked or verified"
+    "name": "OCIF",
+    "url": "http://www.ocif.gobierno.pr/",
+    "terms": "Aviso Legal / Derecho a la Intimidad",
+    "terms_url": "http://www.ocif.gobierno.pr/avisolegal_eng.html"
   }
 }

@@ -23,14 +23,16 @@ URL_WITH_PDF_LINKS = 'http://www.ocif.gobierno.pr/concesionariosbusqueda_eng.htm
 # Basic idea of the pdf parser is from https://blog.scraperwiki.com/2012/06/pdf-table-extraction-of-a-table/
 
 def get_list_of_pdfs():
-    pdf_links = []
+    pdf_links = {}
 
     r = requests.get(URL_WITH_PDF_LINKS)
     page = BeautifulSoup(r.text)
     for link in page.findAll('a', href=True):
-        if (re.search('documents/.*\.pdf', link['href'])):
-            pdf_links.append(urlparse.urljoin(URL_WITH_PDF_LINKS, link['href']))
-
+        if (re.search('documents/.*\.pdf', link['href']) and link['href'] not in pdf_links):
+            pdf_links[link['href']] = {
+                'url': urlparse.urljoin(URL_WITH_PDF_LINKS, link['href']),
+                'title': " ".join(link.contents[0].split())
+            }
     return pdf_links
 
 def parse_page(layout):
@@ -141,14 +143,16 @@ def convert_pdf_to_dict(path=None, fp=None):
     retstr.close()
     return boxes
 
-# links = get_list_of_pdfs()
-# pprint(links)
-# 
-# pdf_url = requests.get(links[0])
-# pdf_str = convert_pdf_to_txt(fp=StringIO(pdf_url.content))
-data = convert_pdf_to_dict('/home/odi/Desktop/RC.pdf')
+links = get_list_of_pdfs()
+# for k, v in links.iteritems():
+#     pdf = requests.get(v['url'])
+#     data = convert_pdf_to_dict(fp=StringIO(pdf.content))
+v = links[u'documents/cons/RC.pdf']
+pdf = requests.get(v['url'])
+data = convert_pdf_to_dict(fp=StringIO(pdf.content))
 
 for d in data:
     d['sample_date'] = datetime.datetime.now().isoformat()
     d['source_url'] = URL_WITH_PDF_LINKS
+    d['classification'] = v['title']
     print json.dumps(d)
