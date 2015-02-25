@@ -20,6 +20,8 @@ turbotlib.log("Starting run...") # Optional debug logging
 
 URL_WITH_PDF_LINKS = 'http://www.ocif.gobierno.pr/concesionariosbusqueda_eng.htm'
 
+# Basic idea of the pdf parser is from https://blog.scraperwiki.com/2012/06/pdf-table-extraction-of-a-table/
+
 def get_list_of_pdfs():
     pdf_links = []
 
@@ -80,8 +82,16 @@ def parse_page(layout):
         for ix in range(len(xlist)):
             boxes[iy][ix] = [ "".join(s) for s in boxes[iy][ix] ]
     del boxes[-5:]
+
     headers = [ "".join(lh.strip() for lh in h).strip()  for h in boxes.pop() ]
     assert headers == [u'NOMBRE INSTITUCI\xd3N', u'DBA', u'DIRECCI\xd3N', u'CIUDAD', u'ZIPCODE', u'TEL.', u'FECHA LIC.', u'NUM. LIC.', ''] 
+
+    # merge entries where needed
+    for i, entry in enumerate(boxes):
+        if (len(entry[7]) == 0 or entry[7][0].strip() == '' ) and boxes[i+1]:
+           if len(entry[0]) > 0 and entry[0][0] != 'GRAN TOTAL:':
+                boxes[i+1][0][0] += entry[0][0] 
+
     box_list = []
     for row in boxes:
         if (row[0] != ''):
@@ -116,15 +126,15 @@ def convert_pdf_to_txt(path=None, fp=None):
     maxpages = 0
     caching = True
     pagenos=set()
+    boxes = []
     for page in PDFPage.get_pages(fp, pagenos, maxpages=maxpages, password=password, caching=caching, check_extractable=True):
         interpreter.process_page(page)
         layout = device.get_result()
         try:
-            boxes = parse_page(layout)
-            pprint(boxes)
+            boxes.extend(parse_page(layout))
         except UnrecognizedTypeError, e:
            print e
-        
+    boxes = [d for d in boxes if d[u'NUM. LIC.'].strip() != '' ]
     fp.close()
     device.close()
     str = retstr.getvalue()
