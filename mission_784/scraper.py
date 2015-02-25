@@ -56,8 +56,7 @@ def parse_page(layout):
             else:
                 yset.add(b.x0)
         else:
-            pass
-            # raise UnrecognizedTypeError("Unrecognized type: %s" % type(b))
+            turbotlib.log('Unregognized type: %s' % type(b))
 
     xlist = sorted(list(xset))
     ylist = sorted(list(yset))
@@ -112,7 +111,7 @@ def Wposition(wlist, w):
 class UnrecognizedTypeError(Exception):
     pass
 
-def convert_pdf_to_txt(path=None, fp=None):
+def convert_pdf_to_dict(path=None, fp=None):
     if fp is None:
         fp = file(path, 'rb')
     rsrcmgr = PDFResourceManager()
@@ -135,19 +134,21 @@ def convert_pdf_to_txt(path=None, fp=None):
         except UnrecognizedTypeError, e:
            print e
     boxes = [d for d in boxes if d[u'NUM. LIC.'].strip() != '' ]
+    boxes = [ { k:v.strip() for k, v in d.iteritems() } for d in boxes ]
     fp.close()
     device.close()
     str = retstr.getvalue()
     retstr.close()
-    return str
+    return boxes
 
 # links = get_list_of_pdfs()
 # pprint(links)
 # 
 # pdf_url = requests.get(links[0])
 # pdf_str = convert_pdf_to_txt(fp=StringIO(pdf_url.content))
-pdf_str = convert_pdf_to_txt('/home/odi/Desktop/RC.pdf')
+data = convert_pdf_to_dict('/home/odi/Desktop/RC.pdf')
 
-pdf_list = pdf_str.splitlines()
-
-pprint(pdf_list)
+for d in data:
+    d['sample_date'] = datetime.datetime.now().isoformat()
+    d['source_url'] = URL_WITH_PDF_LINKS
+    print json.dumps(d)
