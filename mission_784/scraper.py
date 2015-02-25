@@ -28,7 +28,7 @@ def get_list_of_pdfs():
     r = requests.get(URL_WITH_PDF_LINKS)
     page = BeautifulSoup(r.text)
     for link in page.findAll('a', href=True):
-        if (re.search('documents/.*\.pdf', link['href']) and link['href'] not in pdf_links):
+        if (re.search('documents/cons/.*\.pdf', link['href']) and link['href'] not in pdf_links):
             pdf_links[link['href']] = {
                 'url': urlparse.urljoin(URL_WITH_PDF_LINKS, link['href']),
                 'title': " ".join(link.contents[0].split())
@@ -57,6 +57,8 @@ def parse_page(layout):
                 xset.add(b.y0)
             else:
                 yset.add(b.x0)
+        elif type(b) == LTImage:
+            continue
         else:
             turbotlib.log('Unregognized type: %s' % type(b))
 
@@ -85,13 +87,19 @@ def parse_page(layout):
     del boxes[-5:]
 
     headers = [ "".join(lh.strip() for lh in h).strip()  for h in boxes.pop() ]
-    assert headers == [u'NOMBRE INSTITUCI\xd3N', u'DBA', u'DIRECCI\xd3N', u'CIUDAD', u'ZIPCODE', u'TEL.', u'FECHA LIC.', u'NUM. LIC.', ''] 
+    try:
+        assert headers == [u'NOMBRE INSTITUCI\xd3N', u'DBA', u'DIRECCI\xd3N', u'CIUDAD', u'ZIPCODE', u'TEL.', u'FECHA LIC.', u'NUM. LIC.', ''] 
+    except AssertionError:
+        turbotlib.log('Headers: %s' % headers)
+        raise
 
     # merge entries where needed
     for i, entry in enumerate(boxes):
         if (len(entry[7]) == 0 or entry[7][0].strip() == '' ) and boxes[i+1]:
            if len(entry[0]) > 0 and entry[0][0] != 'GRAN TOTAL:':
-                boxes[i+1][0][0] += entry[0][0] 
+                boxes[i+1][0].extend(entry[0])
+           if len(entry[1]) > 0:
+                boxes[i+1][1].extend(entry[1])
 
     box_list = []
     for row in boxes:
@@ -144,15 +152,19 @@ def convert_pdf_to_dict(path=None, fp=None):
     return boxes
 
 links = get_list_of_pdfs()
-# for k, v in links.iteritems():
-#     pdf = requests.get(v['url'])
-#     data = convert_pdf_to_dict(fp=StringIO(pdf.content))
-v = links[u'documents/cons/RC.pdf']
-pdf = requests.get(v['url'])
-data = convert_pdf_to_dict(fp=StringIO(pdf.content))
+exceptions = [u'documents/cons/IA.pdf', u'documents/cons/BROKERDEALER.pdf']
 
-for d in data:
-    d['sample_date'] = datetime.datetime.now().isoformat()
-    d['source_url'] = URL_WITH_PDF_LINKS
-    d['classification'] = v['title']
-    print json.dumps(d)
+for k, v in links.iteritems():
+    if (k in exceptions):
+        turbotlib.log('This PDF is an exception, it will be scraped later')
+        continue
+    turbotlib.log("Scrape '%s' from %s" % (v['title'], v['url']))
+    pdf = requests.get(v['url'])
+    data = convert_pdf_to_dict(fp=StringIO(pdf.content))
+    for d in data:
+        d['sample_date'] = datetime.datetime.now().isoformat()
+        d['source_url'] = v['url']
+        d['classification'] = v['title']
+        print json.dumps(d)
+
+turbotlib.log("End of scraping!")
