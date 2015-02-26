@@ -10,7 +10,7 @@ from BeautifulSoup import BeautifulSoup
 
 from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
 from pdfminer.converter import TextConverter, PDFPageAggregator
-from pdfminer.layout import LAParams, LTTextBox, LTTextLine, LTFigure, LTImage, LTTextLineHorizontal, LTTextBoxHorizontal, LTChar, LTRect, LTLine, LTAnno
+from pdfminer.layout import LAParams, LTTextBox, LTTextLine, LTFigure, LTImage, LTTextLineHorizontal, LTTextBoxHorizontal, LTChar, LTRect, LTLine, LTAnno, LTCurve
 from pdfminer.pdfpage import PDFPage
 from cStringIO import StringIO
 
@@ -21,6 +21,38 @@ turbotlib.log("Starting run...") # Optional debug logging
 URL_WITH_PDF_LINKS = 'http://www.ocif.gobierno.pr/concesionariosbusqueda_eng.htm'
 
 # Basic idea of the pdf parser is from https://blog.scraperwiki.com/2012/06/pdf-table-extraction-of-a-table/
+
+config = {
+    u'documents/cons/IA.pdf': {
+        'enabled': False,
+        'unique_column_name': 'LIC.NUM.',
+        'name_column_name': u'NAME',
+        'merge': False,
+        'merge_indexes': [],
+        'headers': [u'NAME', '', u'LIC.NUM.', u'CONTACT', u'ADDRESS', u'NEXTRENEWAL', u'CRD. #', u'TELEPHONEAND FAX', ''],
+        'total_title': 'GRAND TOTAL:',
+    },
+    u'documents/cons/BROKERDEALER.pdf': {
+        'enabled': True,
+        'remove': -1,
+        'unique_column_name': u'LIC.NUM.',
+        'name_column_name': u'NAME',
+        'merge': True,
+        'merge_indexes': [],
+        'headers': [u'NAME', '', u'LIC.NUM.', u'ADDRESS', u'NEXTRENEWAL', u'CRD. #', u'TELEPHONEAND FAX', u'BRANCHES', u'CONTACT', ''],
+        'total_title': 'GRAND TOTAL:',
+    },
+    'default': {
+        'enabled': True,
+        'remove': -5,
+        'unique_column_name': 'NUM. LIC.',
+        'name_column_name': u'NOMBRE INSTITUCI\xd3N',
+        'merge': True,
+        'merge_indexes': [1],
+        'headers': [u'NOMBRE INSTITUCI\xd3N', u'DBA', u'DIRECCI\xd3N', u'CIUDAD', u'ZIPCODE', u'TEL.', u'FECHA LIC.', u'NUM. LIC.', ''],
+        'total_title': 'GRAN TOTAL:',
+    }
+}
 
 def get_list_of_pdfs():
     pdf_links = {}
@@ -35,7 +67,7 @@ def get_list_of_pdfs():
             }
     return pdf_links
 
-def parse_page(layout):
+def parse_page(layout, config=None):
     xset, yset = set(), set()
     tlines = [ ]
     objstack = list(reversed(layout._objs))
@@ -45,14 +77,14 @@ def parse_page(layout):
             objstack.extend(reversed(b._objs))  # put contents of aggregate object into stack
         elif type(b) == LTTextLineHorizontal:
             tlines.append(b)
-        elif type(b) == LTLine:
+        elif type(b) in [LTLine]:
             if b.x0 == b.x1:
                 xset.add(b.x0)
             elif b.y0 == b.y1:
                 yset.add(b.y0)
             else:
                 print "sloped line", b
-        elif type(b) == LTRect: 
+        elif type(b) in [LTRect]: 
             if b.x1 - b.x0 < 2.0:
                 xset.add(b.y0)
             else:
@@ -84,22 +116,34 @@ def parse_page(layout):
     for iy in range(len(ylist)):
         for ix in range(len(xlist)):
             boxes[iy][ix] = [ "".join(s) for s in boxes[iy][ix] ]
-    del boxes[-5:]
 
+    if 'remove' in config:
+        del boxes[config['remove']:]
+    
     headers = [ "".join(lh.strip() for lh in h).strip()  for h in boxes.pop() ]
     try:
-        assert headers == [u'NOMBRE INSTITUCI\xd3N', u'DBA', u'DIRECCI\xd3N', u'CIUDAD', u'ZIPCODE', u'TEL.', u'FECHA LIC.', u'NUM. LIC.', ''] 
+        assert headers == config['headers']
     except AssertionError:
         turbotlib.log('Headers: %s' % headers)
-        raise
+        turbotlib.log('Headers (config): %s' % config['headers'])
 
     # merge entries where needed
-    for i, entry in enumerate(boxes):
-        if (len(entry[7]) == 0 or entry[7][0].strip() == '' ) and boxes[i+1]:
-           if len(entry[0]) > 0 and entry[0][0] != 'GRAN TOTAL:':
-                boxes[i+1][0].extend(entry[0])
-           if len(entry[1]) > 0:
-                boxes[i+1][1].extend(entry[1])
+    if config['merge']:
+        name_column_index = headers.index(config['name_column_name'])
+        unique_column_index = headers.index(config['unique_column_name'])
+        for i, entry in enumerate(boxes):
+            if headers[name_column_index+1] == '' and entry[name_column_index+1]:
+                boxes[i][name_column_index][1:1] = boxes[i][name_column_index+1]
+
+        for i, entry in enumerate(boxes):
+            if (len(entry[unique_column_index]) == 0 or entry[unique_column_index][0].strip() == '' ) and boxes[i+1]:
+               # if headers[name_column_index+1] == '' and boxes[i+1][name_column_index+1]:
+               #      boxes[i+1][name_column_index].extend(boxes[i+1][name_column_index+1])
+               if len(entry[name_column_index]) > 0 and entry[name_column_index][0] != config['total_title']:
+                    boxes[i+1][name_column_index].extend(entry[name_column_index])
+               for idx in config['merge_indexes']:
+                   if len(entry[idx]) > 0:
+                        boxes[i+1][idx].extend(entry[idx])
 
     box_list = []
     for row in boxes:
@@ -121,7 +165,7 @@ def Wposition(wlist, w):
 class UnrecognizedTypeError(Exception):
     pass
 
-def convert_pdf_to_dict(path=None, fp=None):
+def convert_pdf_to_dict(path=None, fp=None, config=None):
     if fp is None:
         fp = file(path, 'rb')
     rsrcmgr = PDFResourceManager()
@@ -140,10 +184,10 @@ def convert_pdf_to_dict(path=None, fp=None):
         interpreter.process_page(page)
         layout = device.get_result()
         try:
-            boxes.extend(parse_page(layout))
+            boxes.extend(parse_page(layout, config))
         except UnrecognizedTypeError, e:
            print e
-    boxes = [d for d in boxes if d[u'NUM. LIC.'].strip() != '' ]
+    boxes = [d for d in boxes if d[config['unique_column_name']].strip() != '' ]
     boxes = [ { k:v.strip() for k, v in d.iteritems() } for d in boxes ]
     fp.close()
     device.close()
@@ -152,15 +196,17 @@ def convert_pdf_to_dict(path=None, fp=None):
     return boxes
 
 links = get_list_of_pdfs()
-exceptions = [u'documents/cons/IA.pdf', u'documents/cons/BROKERDEALER.pdf']
-
 for k, v in links.iteritems():
-    if (k in exceptions):
-        turbotlib.log('This PDF is an exception, it will be scraped later')
+    if (k in config):
+        pdf_config = config[k]
+    else:
+       pdf_config = config['default']
+
+    if not pdf_config['enabled']:
         continue
     turbotlib.log("Scrape '%s' from %s" % (v['title'], v['url']))
     pdf = requests.get(v['url'])
-    data = convert_pdf_to_dict(fp=StringIO(pdf.content))
+    data = convert_pdf_to_dict(fp=StringIO(pdf.content), config=pdf_config)
     for d in data:
         d['sample_date'] = datetime.datetime.now().isoformat()
         d['source_url'] = v['url']
