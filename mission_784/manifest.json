@@ -12,7 +12,7 @@
   },
   "files": [
     "scraper.py",
-    "license_transformer.py"
+    "licence_transformer.py"
   ],
   "transformers": [{
     "file":  "licence_transformer.py",
