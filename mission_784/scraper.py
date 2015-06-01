@@ -208,10 +208,12 @@ for k, v in links.iteritems():
     pdf = requests.get(v['url'])
     data = convert_pdf_to_dict(fp=StringIO(pdf.content), config=pdf_config)
     for d in data:
+        del d['']
         d['sample_date'] = datetime.datetime.now().isoformat()
         d['source_url'] = v['url']
         d['classification'] = v['title']
         d['NUM. LIC.'] = d[pdf_config['unique_column_name']]
+        d['NAME'] = d[pdf_config['name_column_name']]
         print json.dumps(d)
 
 turbotlib.log("End of scraping!")
