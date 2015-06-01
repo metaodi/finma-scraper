@@ -8,9 +8,9 @@ while True:
 
     raw_record = json.loads(line)
 
-    if 'LIC.NUM.' in raw_record:
-        licence_record = {
-        "company_name": raw_record[u'NAME'],
+    licence_record = {
+        "company_name": raw_record['NAME'],
+        "license_number": raw_record['NUM. LIC.'],
         "company_jurisdiction": 'Puerto Rico',
         "licence_jurisdiction": 'Puerto Rico',
         "source_url": raw_record['source_url'],
@@ -18,17 +18,7 @@ while True:
         "jurisdiction_classification": raw_record['classification'],
         "category": 'Financial',
         "confidence": 'HIGH',
-        }
-    else:
-        licence_record = {
-        "company_name": raw_record[u'NOMBRE INSTITUCI\xd3N'],
-        "company_jurisdiction": 'Puerto Rico',
-        "licence_jurisdiction": 'Puerto Rico',
-        "source_url": raw_record['source_url'],
-        "sample_date": raw_record['sample_date'],
-        "jurisdiction_classification": raw_record['classification'],
-        "category": 'Financial',
-        "confidence": 'HIGH',
-        }
+        "regulator": 'Oficina del Comisionado de Instituciones Financieras',
+    }
 
     print json.dumps(licence_record)
