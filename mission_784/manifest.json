@@ -5,10 +5,11 @@
   "language": "python",
   "data_type": "primary data",
   "identifying_fields": [
-    "NUM. LIC."
+    "NUM. LIC.",
+    "NAME"
   ],
   "company_fields": {
-    "name": "NOMBRE INSTITUCI\xd3N"
+    "name": "NAME"
   },
   "files": [
     "scraper.py",
@@ -17,7 +18,7 @@
   "transformers": [{
     "file":  "licence_transformer.py",
     "data_type": "simple-licence",
-    "identifying_fields": ["company_name"]
+    "identifying_fields": ["company_name", "license_number"]
   }],
   "frequency": "monthly",
   "publisher": {
