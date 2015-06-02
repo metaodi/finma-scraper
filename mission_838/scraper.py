@@ -8,7 +8,7 @@ import xlrd
 
 turbotlib.log("Starting run...") # Optional debug logging
 
-FINMA_URL = 'https://www.finma.ch/institute/xls_d/dbeh.xlsx'
+FINMA_URL = 'http://www.finma.ch/institute/xls_d/dbeh.xlsx'
 HEADER_ROW_NUM = 3
 
 def get_rows(file_path=None, content=None):
