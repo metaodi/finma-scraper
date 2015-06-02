@@ -10,7 +10,7 @@ while True:
 
     licence_record = {
         "company_name": raw_record['NAME'],
-        "license_number": raw_record['NUM. LIC.'],
+        "licence_number": raw_record['NUM. LIC.'],
         "company_jurisdiction": 'Puerto Rico',
         "licence_jurisdiction": 'Puerto Rico',
         "source_url": raw_record['source_url'],

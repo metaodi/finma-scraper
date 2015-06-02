@@ -18,7 +18,7 @@
   "transformers": [{
     "file":  "licence_transformer.py",
     "data_type": "simple-licence",
-    "identifying_fields": ["company_name", "license_number"]
+    "identifying_fields": ["company_name", "licence_number"]
   }],
   "frequency": "monthly",
   "publisher": {
